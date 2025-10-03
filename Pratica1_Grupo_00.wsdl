@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="http://comprebem.com/marketplace/v1"
+    targetNamespace="http://comprebem.com/marketplace/v1"
+    name="MarketplaceService">
+
+  <!-- =========================
+       TYPES (XSD embutido)
+       ========================= -->
+  <wsdl:types>
+    <xs:schema
+        targetNamespace="http://comprebem.com/marketplace/v1"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
+
+      <!-- ====== Tipos base / enums ====== -->
+      <xs:simpleType name="ProductStatus">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="ACTIVE"/>
+          <xs:enumeration value="INACTIVE"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <xs:simpleType name="CurrencyCode">
+        <!-- ISO-4217 (ex.: BRL). Não valida lista completa, mas restringe a 3 letras maiúsculas -->
+        <xs:restriction base="xs:string">
+          <xs:pattern value="[A-Z]{3}"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <xs:simpleType name="OperationStatus">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="SUCCESS"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <xs:simpleType name="ErrorCode">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="PRODUCT_NOT_FOUND"/>
+          <xs:enumeration value="VALIDATION_ERROR"/>
+          <xs:enumeration value="CONFLICT"/>
+          <xs:enumeration value="INTERNAL_ERROR"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <!-- ====== Entidades ====== -->
+      <xs:complexType name="Product">
+        <xs:sequence>
+          <xs:element name="productId" type="xs:string"/>
+          <xs:element name="name" type="xs:string"/>
+          <xs:element name="price" type="xs:decimal"/>
+          <xs:element name="currency" type="tns:CurrencyCode"/>
+          <xs:element name="category" type="xs:string"/>
+          <xs:element name="status" type="tns:ProductStatus"/>
+          <xs:element name="updatedAt" type="xs:dateTime" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <!-- Atualização parcial: campos opcionais para patch -->
+      <xs:complexType name="ProductUpdate">
+        <xs:sequence>
+          <xs:element name="name" type="xs:string" minOccurs="0"/>
+          <xs:element name="price" type="xs:decimal" minOccurs="0"/>
+          <xs:element name="currency" type="tns:CurrencyCode" minOccurs="0"/>
+          <xs:element name="category" type="xs:string" minOccurs="0"/>
+          <xs:element name="status" type="tns:ProductStatus" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="SearchQuery">
+        <xs:sequence>
+          <xs:element name="nameContains" type="xs:string" minOccurs="0"/>
+          <xs:element name="category" type="xs:string" minOccurs="0"/>
+          <xs:element name="status" type="tns:ProductStatus" minOccurs="0"/>
+          <xs:element name="page" type="xs:int"/>
+          <xs:element name="pageSize" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <!-- Restrições de paginação -->
+      <xs:element name="page" type="xs:int"/>
+      <xs:simpleType name="PageNumber">
+        <xs:restriction base="xs:int">
+          <xs:minInclusive value="1"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <xs:simpleType name="PageSize">
+        <xs:restriction base="xs:int">
+          <xs:minInclusive value="1"/>
+          <xs:maxInclusive value="100"/>
+        </xs:restriction>
+      </xs:simpleType>
+
+      <xs:complexType name="SearchResult">
+        <xs:sequence>
+          <xs:element name="items" minOccurs="0">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="item" type="tns:Product" minOccurs="0" maxOccurs="unbounded"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="page" type="tns:PageNumber"/>
+          <xs:element name="pageSize" type="tns:PageSize"/>
+          <xs:element name="total" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="StatusResponse">
+        <xs:sequence>
+          <xs:element name="status" type="tns:OperationStatus"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <!-- ====== Fault comum ====== -->
+      <xs:complexType name="CommonFault">
+        <xs:sequence>
+          <xs:element name="errorCode" type="tns:ErrorCode"/>
+          <xs:element name="message" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <!-- CreateProduct -->
+      <xs:element name="CreateProductRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="product" type="tns:Product"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="CreateProductResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="tns:StatusResponse"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- UpdateProduct -->
+      <xs:element name="UpdateProductRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="productId" type="xs:string"/>
+            <xs:element name="updates" type="tns:ProductUpdate"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="UpdateProductResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="tns:StatusResponse"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- DeleteProduct -->
+      <xs:element name="DeleteProductRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="productId" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeleteProductResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="tns:StatusResponse"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- GetProducts -->
+      <xs:element name="GetProductsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="query">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="nameContains" type="xs:string" minOccurs="0"/>
+                  <xs:element name="category" type="xs:string" minOccurs="0"/>
+                  <xs:element name="status" type="tns:ProductStatus" minOccurs="0"/>
+                  <xs:element name="page" type="tns:PageNumber"/>
+                  <xs:element name="pageSize" type="tns:PageSize"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="GetProductsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="tns:SearchResult"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- Fault element -->
+      <xs:element name="CommonFault" type="tns:CommonFault"/>
+
+    </xs:schema>
+  </wsdl:types>
+
+  <!-- =========================
+       MESSAGES
+       ========================= -->
+  <wsdl:message name="CreateProductRequestMessage">
+    <wsdl:part name="parameters" element="tns:CreateProductRequest"/>
+  </wsdl:message>
+  <wsdl:message name="CreateProductResponseMessage">
+    <wsdl:part name="parameters" element="tns:CreateProductResponse"/>
+  </wsdl:message>
+
+  <!-- Fault message compartilhada -->
+  <wsdl:message name="CommonFaultMessage">
+    <wsdl:part name="fault" element="tns:CommonFault"/>
+  </wsdl:message>
+
+  <!-- =========================
+       PORT TYPE
+       ========================= -->
+  <wsdl:portType name="MarketplacePortType">
+
+    <wsdl:operation name="CreateProduct">
+      <wsdl:documentation>Cria um novo produto com dados mínimos obrigatórios.</wsdl:documentation>
+      <wsdl:input message="tns:CreateProductRequestMessage"/>
+      <wsdl:output message="tns:CreateProductResponseMessage"/>
+      <wsdl:fault name="CommonFault" message="tns:CommonFaultMessage"/>
+    </wsdl:operation>
+
+  </wsdl:portType>
+
+  <!-- =========================
+       BINDING (SOAP 1.1 doc/lit)
+       ========================= -->
+  <wsdl:binding name="MarketplaceBinding" type="tns:MarketplacePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    
+    <wsdl:operation name="CreateProduct">
+      <soap:operation soapAction="http://comprebem.com/marketplace/v1/CreateProduct" style="document"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="CommonFault">
+        <soap:fault name="CommonFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+
+  </wsdl:binding>
+
+  <!-- =========================
+       SERVICE / ENDPOINT
+       ========================= -->
+  <wsdl:service name="MarketplaceService">
+    <wsdl:documentation>Serviço público SOAP para integração de parceiros (lojistas) ao Marketplace da CompreBem.</wsdl:documentation>
+    <wsdl:port name="MarketplacePort" binding="tns:MarketplaceBinding">
+      <soap:address location="https://localhost:8080/soap/marketplace"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>
