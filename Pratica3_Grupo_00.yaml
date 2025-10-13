@@ -1,0 +1,120 @@
+openapi: 3.0.0
+info:
+  title: CompreBem Marketeplace API — Produtos
+  description: |-
+       # API de Integração de Produtos (CompreBem)
+        Esta API permite que os parceiros (lojistas) criem, atualizem, excluam e pesquisem produtos.
+        O formato segue o padrão REST com recursos JSON e especificação OpenAPI 3.0.
+  contact:
+    email: apiteam@comprebem.com.br
+  version: 1.0.0
+externalDocs:
+  description: Mais sobre CompreBem Marketeplace API
+  url: https://comprebem.com.br/apis
+servers:
+  - url: https://api.comprebem.com.br/mkt-api/v1
+tags:
+  - name: Produtos
+    description: Tudo relacionado a Produtos
+    externalDocs:
+      description: Find out more
+      url: https://comprebem.com.br/apis
+paths:
+  /produtos:
+    get:
+      tags:
+        - Produtos
+      summary: Obtém produtos
+      description: Obtém uma listagem de produtos. Alguns parâmetros para busca podem ser usados. Esse recurso também implementa paginação.
+      operationId: obterProdutos
+      parameters:
+        - in: query
+          name: nomeProduto
+          description: Nome do produto.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            contentRange:
+              description: Total de registros existentes.
+              schema:
+                type: integer
+                format: int32
+            acceptRange:
+              description: Quantidade máxima de registros que podem ser solicitado por requisição.
+              schema:
+                type: integer
+                format: int32
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/produto'
+        '401':
+          description: Não autorizado.
+        '403':
+          description: Proibido para esse recurso.
+        '500':
+          description: Erro Interno.
+components:
+  parameters:
+    fields:
+      name: _fields
+      description: |
+        Informar quais atributos devem retornar na resposta. Ex.: _fields=codigo,nome,endereco.
+      in: query
+      required: false
+      schema:
+        type: string
+    limit:
+      name: _limit
+      description: Identificação da quantidade de registros a serem retornados.
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+    offset:
+      name: _offset
+      description: Identificação do registro inicial a ser retornado.
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+  schemas:
+    produto:
+      type: object
+      required: [id, name, price, currency, category, status]
+      properties:
+        id:
+          type: string
+          example: 9DAFB45372A8
+        name:
+          type: string
+          example: iPhone 17
+        price:
+          type: number
+          format: float
+          example: 18000
+        currency:
+          type: string
+          example: BRL
+        category:
+          type: string
+          example: Samrt Phone
+        status:
+          type: string
+          enum: [ATIVO, INATIVO]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
