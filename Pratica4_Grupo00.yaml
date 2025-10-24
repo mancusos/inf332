@@ -1,0 +1,160 @@
+# Versão da especificação AsyncAPI utilizada
+asyncapi: 3.0.0
+
+info:
+  # Título e versão deste “catálogo” de eventos
+  title: Plataforma de Eventos CompreBem
+  version: 1.0.0
+  # Descrição breve para o portal de developers
+  description: |
+    Este documento define a plataforma de eventos orientada a business moments da CompreBem.
+    O objetivo é estabelecer um ecossistema proativo, no qual a CompreBem não apenas responde ao mercado,
+    mas lidera o engajamento com clientes e parceiros, disparando eventos estratégicos capazes de gerar
+    oportunidades de negócio em tempo real.
+
+servers:
+  # Definição do(s) servidor(es) onde os eventos são trafegados/publicados
+  production:
+    # Host do provedor (AWS SNS) com variável de região
+    host: 'sns.{region}.amazonaws.com'
+    # Protocolo do servidor (bindings do AsyncAPI para SNS)
+    protocol: sns
+    # Descrição e título do servidor
+    description: AWS SNS utilizado como barramento de eventos em ambiente de produção.
+    title: AWS SNS Production
+    # Variáveis de template para compor o host (ex.: sa-east-1)
+    variables:
+      region:
+        default: us-east-1
+        enum: [us-east-1, us-east-2, sa-east-1, eu-west-1]
+    # Espaço reservado para configurações específicas do protocolo (SNS)
+    bindings:
+      sns: {}
+    # Tags úteis para catalogação no portal/console
+    tags:
+      - name: aws
+      - name: sns
+      - name: production
+
+channels:
+  # Catálogo de “endereços” lógicos onde as mensagens trafegam
+  promoNearStore:
+    # Endereço lógico do canal (pode mapear para o nome físico do tópico SNS)
+    address: vendas/v1/marketing/promo-near-store-topic
+    # Títulos/descrições do canal, úteis para o portal de developers
+    title: Promoção contextual para engajamento omnichannel.
+    summary: Evento proativo de marketing disparado quando um cliente com opt-in é detectado nas proximidades de uma loja física.
+    description: |
+      Este canal representa um business moment estratégico, no qual a CompreBem passa a atuar de forma
+      proativa na jornada do cliente. Ao detectar a presença física de um cliente elegível próximo a uma loja,
+      a empresa dispara uma promoção contextual com base em preferências, histórico de navegação e relevância comercial.
+      Esse padrão é um exemplo da nova geração de eventos voltados à ativação inteligente de oportunidades de venda.
+    # Relaciona quais mensagens (contratos) podem trafegar neste canal
+    messages:
+      PromoNearStore:
+        $ref: '#/components/messages/PromoNearStore'
+
+operations:
+  # Operações definem como o sistema interage com o canal: enviar (send) ou receber (receive)
+  publishCustomerNearStore:
+    # action: send => esta operação envia (publica) mensagens no canal
+    action: send
+    title: Disparo do evento de promoção contextual.
+    summary: APPs parceiras publicam eventos para que canais e aplicações de engajamento consumam e reajam em tempo real.
+    # Qual canal esta operação usa
+    channel:
+      $ref: '#/channels/promoNearStore'
+    # Quais mensagens esta operação envia
+    messages:
+      - $ref: '#/channels/promoNearStore/messages/PromoNearStore'
+    # Tags para facilitar busca/filtragem no portal
+    tags:
+      - name: omnichannel
+      - name: proativo
+      - name: marketing
+
+  subscribeCustomerNearStore:
+    # action: receive => esta operação consome (assina) mensagens do canal
+    action: receive
+    title: Consumo do evento de promoção contextual.
+    summary: Canais e aplicações de engajamento consumam e reajam em tempo real com ações relevantes para o negócio.
+    channel:
+      $ref: '#/channels/promoNearStore'
+    # Quais mensagens esta operação recebe
+    messages:
+      - $ref: '#/channels/promoNearStore/messages/PromoNearStore'
+    tags:
+      - name: omnichannel
+      - name: proativo
+      - name: marketing
+
+components:
+  # Repositório de blocos reutilizáveis: mensagens, schemas, IDs de correlação etc.
+  messages:
+      # Contrato da mensagem enviada/recebida no canal
+      PromoNearStore:
+        name: PromoNearStore
+        title: Evento de promoção personalizada com base em geolocalização.
+        summary: Evento voltado para ativação de vendas e engajamento em tempo real com foco no cliente.
+        # Tipo de mídia do payload
+        contentType: application/json
+        # Como extrair o correlationId da mensagem para rastreamento ponta a ponta
+        correlationId:
+          $ref: '#/components/correlationIds/default'
+        # Estrutura do corpo da mensagem
+        payload:
+          $ref: '#/components/schemas/PromoNearStore'
+        # Espaço para configurações específicas do protocolo (SNS)
+        bindings:
+          sns: {}
+
+  correlationIds:
+    # Convenção única de onde ler o correlationId dentro da mensagem
+    default:
+      description: Correlation ID padrão para rastreamento de ponta a ponta.
+      # Ponteiro JSON para o local do campo dentro do payload
+      location: $message.payload#/correlationId
+
+  schemas:
+    # Schemas definem os formatos dos objetos trafegados (payloads e metadados)
+    EventMeta:
+      # Metadados comuns a todos os eventos (id, horário, origem, versão do schema)
+      type: object
+      required: [eventId, occurredAt, source, schemaVersion]
+      properties:
+        eventId:
+            type: string
+            format: uuid
+            description: Identificador único e idempotente do evento.
+        occurredAt:
+            type: string
+            format: date-time
+            description: Data/hora UTC em que o evento ocorreu.
+        source:
+            type: string
+            example: compreben.marketing
+            description: Identifica a origem do evento.
+        schemaVersion:
+          type: string
+          example: "1.0.0"
+          description: Versão do schema para facilitar evolução sem quebrar consumidores.
+    # Payload específico da mensagem PromoNearStore
+    PromoNearStore:
+      # allOf reutiliza EventMeta e adiciona os campos de negócio do evento
+      allOf:
+        - $ref: '#/components/schemas/EventMeta'
+        - type: object
+          required: [customerId, storeId]
+          properties:
+            # Identificador do cliente elegível
+            customerId:
+              type: string
+              description: Identificador do cliente.
+            # Identificador da loja física próxima
+            storeId:
+              type: string
+              description: Identificador da loja que o cliente está próximo.
+            # Distância do cliente até a loja no momento do disparo
+            distanceMeters:
+                type: number
+                description: Distância aproximada em metros que o cliente está da loja.
